@@ -136,7 +136,7 @@ body:has(.play58),body:has(.play58) #app,.play58{overscroll-behavior:none!import
 .play58 .hud58-actions button{padding:3px 6px;min-height:29px;font-size:10px}
 @media(max-width:580px){.play58 .hud58{right:calc(6px + env(safe-area-inset-right))!important;left:calc(6px + env(safe-area-inset-left))!important;max-width:calc(100% - 12px)}.play58 .hud58-title{flex:1 1 46%;min-width:100px}.play58 .hud58-info{order:3;width:auto;flex:1 1 42%}.play58 .hud58-actions{flex:1 1 auto}.play58 .hud58-actions button{font-size:9px;padding:2px 4px}}
 
-/* v0.63: BYGNINGER BEHOLDER PROPORSJONENE på alle enheter. */
+/* v0.64: Responsivt anlegg, bygningene flyttes i stedet for aa strekkes. */
 .play58 .map57-stage svg{object-fit:contain!important;overflow:visible!important}
 .play58 .map57-viewport{background:linear-gradient(90deg,#517961 0%,#517961 75%,#185a72 75%,#185a72 100%)!important}
 .play58 .map57-stage{background:linear-gradient(90deg,#527961 0%,#527961 76%,#19566d 76%,#19566d 100%)!important}
@@ -980,6 +980,17 @@ table{max-width:none}
 body:has(.back61) .shell{padding-top:54px}
 body:has(.back61) .scene-head .scene-return{display:none}
 @media(max-width:600px){.back61{top:calc(env(safe-area-inset-top) + 6px);left:max(9px,env(safe-area-inset-left));min-height:44px}.back61 span{font-size:14px}}
+</style><style id="v65-service-roads-alerts">
+/* Notifications participate in the header layout instead of covering day controls. */
+.play58 .alert-dock{position:relative!important;top:auto!important;right:auto!important;left:auto!important;z-index:1!important;order:4;pointer-events:auto;flex:0 0 auto}
+.play58 .alert-dock button{min-height:32px;font-size:11px;padding:5px 10px;white-space:nowrap}
+.play58 .hud58{align-items:flex-start;align-content:flex-start;gap:4px 6px}
+.play58 .hud58-title{order:1}
+.play58 .hud58-actions{order:2;flex-wrap:wrap}
+.play58 .hud58-info{order:3;flex:1 1 100%!important;width:100%!important}
+@media(max-width:580px){.play58 .hud58-title{flex:1 1 50%}.play58 .hud58-actions{flex:1 1 40%}.play58 .alert-dock{order:4}.play58 .hud58-info{order:3}}
+.site65-traffic{pointer-events:none}
+.site65-worker,.site65-vehicle{filter:drop-shadow(1px 3px 2px #102a38a8)}
 </style></head><body><div id="app"><div class="mobile-start-fallback" style="max-width:520px;margin:28px auto;padding:22px 20px;background:#102b3c;color:#e9f9ff;border-radius:18px;border:1px solid #33758b;font-family:system-ui,sans-serif"><div style="font-size:48px;text-align:center">🐟</div><h1 style="font-size:25px;text-align:center;margin:5px 0 10px">SMOLTKONGEN</h1><p style="font-size:16px;line-height:1.5">Spillet venter på at JavaScript skal starte.</p><p style="font-size:15px;line-height:1.5"><strong>Ser du denne meldingen på iPhone?</strong> Da vises HTML-filen i en filforhåndsvisning som ikke kjører spillet.</p><p style="font-size:15px;line-height:1.5">For å spille på mobil må du åpne spillet som en nettside i Safari. Last opp mappen med <strong>index.html</strong> til en webvert (for eksempel Netlify Drop) på PC, og åpne nettadressen på mobilen.</p><p style="font-size:13px;opacity:.85">Dette er ikke en feil i mobilskaleringen. Spillmotoren krever nettleser med JavaScript.</p></div></div><script>
 window.addEventListener('error',function(e){
   const app=document.getElementById('app');
@@ -1597,17 +1608,118 @@ function facilityMap(f){
 const siteCamera57={x:0,y:0,zoom:1,ready:true};
 function siteMapApply57(){const stage=document.querySelector('.map57-stage');if(stage)stage.style.transform=`translate3d(${siteCamera57.x}px,${siteCamera57.y}px,0) scale(${siteCamera57.zoom})`}
 function siteMapReset57(){
- // Draw entire site with uniform scaling; never distort buildings.
- // Unused space becomes surrounding ground/sea, not stretched artwork.
- const viewport=document.querySelector('.map57-viewport');
- const stage=document.querySelector('.map57-stage');
+ const viewport=document.querySelector('.map57-viewport'),stage=document.querySelector('.map57-stage');
  if(!viewport||!stage)return;
  siteCamera57.x=0;siteCamera57.y=0;siteCamera57.zoom=1;
- stage.style.width='100%';stage.style.height='100%';
- stage.style.transform='none';
+ stage.style.width='100%';stage.style.height='100%';stage.style.transform='none';
  const map=stage.querySelector('svg');
- if(map){map.setAttribute('preserveAspectRatio','xMidYMid meet');map.style.width='100%';map.style.height='100%';}
+ if(!map)return;
+ map.style.width='100%';map.style.height='100%';
+ // Adapt building PLACEMENT instead of stretching the SVG.
+ // Buildings are reused from the actual game map, including their click handlers.
+ const ratio=viewport.clientWidth/Math.max(1,viewport.clientHeight);
+ const portrait=ratio<.83;
+ if(!portrait){
+   map.setAttribute('preserveAspectRatio','xMidYMid meet');
+   if(ratio<1.25)siteMapResponsive64(map,'medium');
+   else siteMapResponsive64(map,'wide');
+ }else siteMapResponsive64(map,'portrait');
 }
+function siteMapResponsive64(map,kind){
+ // Anlegget er en sammenhengende arbeidsplass, ikke en samling kort/ruter.
+ // Flytt bygningene uten å endre proporsjonene deres.
+ const ns='http://www.w3.org/2000/svg';
+ const N=(tag,a={})=>{const el=document.createElementNS(ns,tag);Object.entries(a).forEach(([k,v])=>el.setAttribute(k,v));return el};
+ const items=Array.from(map.querySelectorAll(':scope > .map47-link'));
+ if(items.length<10)return;
+ const buildings={};
+ for(const el of items){const label=el.getAttribute('aria-label')||'';const match=label.match(/^Åpne (\w+)/);const key=label.includes('administrasjonsbygget')?'admin':el.getAttribute('onclick')?.includes("tab('contracts')")?'dock':match?.[1];if(key)buildings[key]={el,box:el.getBBox()};}
+ const portrait=kind==='portrait';
+ const medium=kind==='medium';
+ const W=portrait?850:medium?1120:1520,H=portrait?1700:medium?1130:860;
+ const columns=portrait?2:medium?3:4,rows=Math.ceil(12/columns);
+ const left=portrait?25:35,right=portrait?25:medium?75:120;
+ const top=portrait?145:medium?140:115,bottom=portrait?90:medium?100:80;
+ const rowH=(H-top-bottom)/rows;
+ const colW=(W-left-right)/columns;
+ const order=['hatch','dept0','dept1','dept2','silo','water','admin','ras','lab','workshop','power','dock'];
+ map.replaceChildren();map.setAttribute('viewBox',`0 0 ${W} ${H}`);map.setAttribute('preserveAspectRatio','xMidYMid meet');map.setAttribute('data-adaptive-layout',kind);
+ const bg=N('g');map.appendChild(bg);
+ bg.appendChild(N('rect',{width:W,height:H,fill:'#537b62'}));
+ // The coast follows the site's edge; quay connects to the road system.
+ const coast=portrait?W-85:W-95;
+ bg.appendChild(N('rect',{x:coast,y:0,width:W-coast,height:H,fill:'#176078'}));
+ for(let y=11;y<H;y+=27){bg.appendChild(N('path',{d:`M${coast+5} ${y}q22 -8 44 0t44 0`,fill:'none',stroke:'#75bad0','stroke-width':2,opacity:.45}));}
+ bg.appendChild(N('rect',{x:coast-11,y:0,width:11,height:H,fill:'#bdc4a9'}));
+ const dryW=coast-12;
+ // Road network: one central avenue and connecting transverse service roads.
+ const roadLayer=N('g');bg.appendChild(roadLayer);
+ const addRoad=(x,y,w,h,vertical=false)=>{
+  roadLayer.appendChild(N('rect',{x,y,width:w,height:h,fill:'#405960',stroke:'#a1b0a1','stroke-width':3}));
+  const center=vertical?x+w/2:y+h/2;
+  roadLayer.appendChild(N('path',{d:vertical?`M${center} ${y}V${y+h}`:`M${x} ${center}H${x+w}`,stroke:'#e9ce8b','stroke-width':2.5,'stroke-dasharray':'16 14',fill:'none'}));
+ };
+ const lanes=[];
+ for(let i=1;i<rows;i++){
+   const y=top+i*rowH-22;
+   addRoad(0,y,dryW,44);lanes.push(y+22);
+ }
+ const spineX=portrait?dryW*.50:dryW*.48;
+ addRoad(spineX-20,0,40,H,true);
+ const site=N('g');map.appendChild(site);
+ // All old buildings are retained with their original SVG artwork and click handlers.
+ order.forEach((key,i)=>{
+  const entry=buildings[key];if(!entry)return;
+  const col=i%columns,row=Math.floor(i/columns);
+  let x=left+col*colW,y=top+row*rowH+12;
+  const lotW=Math.min(colW-32,(coast-left-10)/columns-17),lotH=rowH-67;
+  const bb=entry.box;
+  const scale=Math.min(lotW/Math.max(1,bb.width),lotH/Math.max(1,bb.height));
+  const posX=x+(lotW-bb.width*scale)/2,posY=y+(lotH-bb.height*scale)/2;
+  // Driveway from building entrance to main roads (not a boxed card).
+  const doorX=posX+bb.width*scale/2, doorY=posY+bb.height*scale;
+  const lane=lanes.length?lanes.reduce((a,b)=>Math.abs(b-doorY)<Math.abs(a-doorY)?b:a):H*.5;
+  const roadEnd=Math.abs(doorX-spineX)<Math.abs(doorY-lane)?spineX:doorX;
+  site.appendChild(N('path',{d:roadEnd===spineX?`M${doorX} ${doorY}H${spineX}`:`M${doorX} ${doorY}V${lane}`,stroke:'#a9b7af','stroke-width':12,fill:'none'}));
+  site.appendChild(N('path',{d:roadEnd===spineX?`M${doorX} ${doorY}H${spineX}`:`M${doorX} ${doorY}V${lane}`,stroke:'#687b79','stroke-width':7,fill:'none'}));
+  const wrapper=N('g',{transform:`translate(${posX} ${posY}) scale(${scale}) translate(${-bb.x} ${-bb.y})`});
+  const clone=entry.el.cloneNode(true);if(key==='admin')clone.removeAttribute('transform');wrapper.appendChild(clone);site.appendChild(wrapper);
+ });
+ // Vegetation, markings and functional open spaces across the unified site.
+ const scenery=N('g',{'pointer-events':'none'});map.appendChild(scenery);
+ for(let i=0;i<(portrait?25:34);i++){
+  const x=19+(i*131)%(dryW-31),y=33+(i*199)%(H-66);
+  if(Math.abs(x-spineX)<43||lanes.some(l=>Math.abs(l-y)<42))continue;
+  scenery.appendChild(N('ellipse',{cx:x+2,cy:y+9,rx:14,ry:5,fill:'#244d3b88'}));
+  scenery.appendChild(N('path',{d:`M${x} ${y-14}l-11 21h22Z`,fill:i%3?'#2a674b':'#336e4e',stroke:'#88ad7e','stroke-width':1.5}));
+ }
+ // Movement is attached to actual service roads, with routes around intersections.
+ const traffic=N('g',{'class':'site65-traffic','aria-hidden':'true'});map.appendChild(traffic);
+ function moving(g,d,time,delay){g.appendChild(N('animateMotion',{path:d,dur:`${time}s`,begin:`${delay}s`,repeatCount:'indefinite',calcMode:'linear',rotate:'auto'}));traffic.appendChild(g)}
+ function worker(tint,tool){const g=N('g',{'class':'site65-worker'});
+  g.appendChild(N('ellipse',{cy:10,rx:9,ry:4,fill:'#102c3780'}));
+  g.appendChild(N('circle',{cy:-12,r:6,fill:'#eab98b'}));
+  g.appendChild(N('path',{d:'M-6 -5H6L7 6H-7Z',fill:tint,stroke:'#f6dbab','stroke-width':1.5}));
+  g.appendChild(N('path',{d:'M-4 6L-5 13M4 6L5 13',stroke:'#153445','stroke-width':3.5}));
+  if(tool)g.appendChild(N('path',{d:'M6 -3L19 9M15 8Q20 15 25 8Z',stroke:'#b7e9f4','stroke-width':2,fill:'none'}));
+  return g;
+ }
+ function truck(tint,load){const g=N('g',{'class':'site65-vehicle'});
+  g.appendChild(N('rect',{x:-26,y:-13,width:47,height:23,rx:4,fill:tint,stroke:'#233946','stroke-width':2}));
+  g.appendChild(N('rect',{x:4,y:-11,width:15,height:15,rx:2,fill:'#a5d4e2',stroke:'#234f5e','stroke-width':2}));
+  if(load)g.appendChild(N('rect',{x:-22,y:-23,width:20,height:10,fill:'#d4bd80',stroke:'#806e43','stroke-width':2}));
+  for(let x of [-15,13])g.appendChild(N('circle',{cx:x,cy:10,r:5,fill:'#233340',stroke:'#c0d0d0','stroke-width':1.5}));
+  return g;
+ }
+ const roadA=lanes[Math.max(0,Math.floor(lanes.length*.3))]||H*.4;
+ const roadB=lanes[Math.max(0,Math.floor(lanes.length*.75))]||H*.7;
+ moving(truck('#e6a33c',true),`M25 ${roadA}H${dryW-12}V${roadB}H25V${roadA}`,25,0);
+ moving(truck('#4190a2',false),`M${dryW-12} ${roadB}H25V${roadA}H${dryW-12}V${roadB}`,34,-11);
+ moving(worker('#ef8b35',true),`M${spineX+6} 20V${H-25}V20`,38,-3);
+ moving(worker('#ef8b35',false),`M${spineX-8} ${H-25}V20V${H-25}`,46,-15);
+ if(lanes.length>1)moving(worker('#d5e5ec',true),`M24 ${roadB+13}H${dryW-17}H24`,39,-8);
+}
+
 function siteMapBounds57(){siteMapReset57()}
 function siteMapZoom57(){siteMapReset57()}
 function siteMapInit57(){siteMapReset57()}
@@ -1830,7 +1942,7 @@ function restoreNavScroll(){const nav=document.querySelector('.sidebar .nav');if
 function immersiveHome58(){
  const f=facility();
  const speeds=['⏸','▶','▶▶','⚡'];
- return `${alertButtonUI()}<div class="play58"><header class="hud58"><div class="hud58-title"><span class="hud58-logo">🐟</span><div><strong>SMOLTKONGEN</strong><small>${f.name}</small></div></div><div class="hud58-info"><div class="hud58-cash">💰 ${nok(s.cash)}</div><div>📅 År ${Math.floor((s.date-1)/365)+1} · dag ${((s.date-1)%365)+1}</div></div><div class="hud58-actions"><button onclick="advance(1)" title="Neste dag">+1 dag</button><button onclick="advance(7)" title="7 dager frem">+7 dager</button><button onclick="setSpeed(${(s.speed+1)%4})" title="Endre spillhastighet">${speeds[s.speed]} ${['Pause','Normal','Rask','Turbo'][s.speed]}</button></div></header><main class="game58" aria-label="Anlegget er spillmenyen">${facilityMap(f)}</main></div>${toastText?`<div class="toast" role="status">${toastText}</div>`:''}${modal||''}`;
+ return `<div class="play58"><header class="hud58">${alertButtonUI()}<div class="hud58-title"><span class="hud58-logo">🐟</span><div><strong>SMOLTKONGEN</strong><small>${f.name}</small></div></div><div class="hud58-info"><div class="hud58-cash">💰 ${nok(s.cash)}</div><div>📅 År ${Math.floor((s.date-1)/365)+1} · dag ${((s.date-1)%365)+1}</div></div><div class="hud58-actions"><button onclick="advance(1)" title="Neste dag">+1 dag</button><button onclick="advance(7)" title="7 dager frem">+7 dager</button><button onclick="setSpeed(${(s.speed+1)%4})" title="Endre spillhastighet">${speeds[s.speed]} ${['Pause','Normal','Rask','Turbo'][s.speed]}</button></div></header><main class="game58" aria-label="Anlegget er spillmenyen">${facilityMap(f)}</main></div>${toastText?`<div class="toast" role="status">${toastText}</div>`:''}${modal||''}`;
 }
 function render(){trackScreen61();if(view==='overview'){document.getElementById('app').innerHTML=immersiveHome58();siteMapInit57();if(alertSheetVisible)showAlertSheet();return;}rememberNavScroll();const f=facility();const screens={admin:adminLobby,hall:hallView,hatchery:hatcheryView,group:groupOverview,competitors,overview,world,production,supplies,employees,operations,care:dailyCareView,build:building,contracts,finances,schedule:scheduleView,help};document.getElementById('app').innerHTML=`${alertButtonUI()}${backButton61()}<div class="shell"><div class="top"><div class="brand"><div class="logo">🐟</div><div><strong>SMOLTKONGEN</strong><small>FRA ROGN TIL SMOLT</small></div></div><div class="stats"><div class="pill"><small>Bank</small><strong class="${s.cash<0?'loss':'profit'}">${nok(s.cash)}</strong></div><div class="pill"><small>Spilldato</small><strong>År ${Math.floor((s.date-1)/365)+1} · dag ${((s.date-1)%365)+1}</strong></div><div class="pill"><small>Statusnivå</small><strong>⭐ ${currentLevel()}</strong></div></div><div class="control">${btn('⏭ +1 dag','advance(1)','sm')}${btn('📅 +7 dager','advance(7)','sm')}${[0,1,2,3].map((v)=>`<button class="btn sm ${s.speed===v?'active':''}" onclick="setSpeed(${v})">${['⏸ Pause','▶ Normal','▶▶ Rask','⚡ Turbo'][v]}</button>`).join('')}</div></div><div class="layout"><aside class="panel sidebar" hidden><div class="side-title">HOVEDMENY</div><div class="nav">${NAV.map(([id,ic,name])=>`<button class="${view===id?'active':''}" onclick="tab('${id}')"><span>${ic}</span>${name}</button>`).join('')}</div><div class="location"><div class="side-title">DINE ANLEGG</div>${s.facilities.map(ff=>`<button class="loc-button" onclick="switchFac('${ff.id}')">${ff.id===s.active?'🟢':'⚪'} ${ff.name}<div class="muted" style="font-size:11px;margin-top:4px">${num(totalFish(ff))} fisk</div></button>`).join('')}</div></aside><main class="panel main"><div class="content">${guidePanel()}${screens[view]()}</div></main><aside class="panel right" hidden><h3>📋 Driftssentral</h3>${kv('Aktivt anlegg',region(s.active).name)}${kv('Samlet kapasitet',num(maxFish(f)))}${kv('Fisk',num(totalFish(f)))}${kv('Fôrlager',feedStock(f).toFixed(1)+' t')}${kv('Vannkvalitet',Math.round(f.waterQuality)+' %')}<hr class="right-divider"><h3>🔔 Meldinger</h3>${s.facilities.filter(ff=>ff.peopleEvent).map(ff=>`<button class="btn primary" style="width:100%;margin-bottom:8px" onclick="switchFac('${ff.id}');tab('employees')">⚠️ Personalvalg: ${ff.name}</button>`).join('')}${s.events.slice(0,7).map((e,i)=>`<button type="button" class="event event-link ${e.kind==='warn'?'warn':''}" onclick="openAlert(${i})" title="Åpne riktig meny for denne meldingen">${e.txt}<small>År ${Math.floor((e.day-1)/365)+1} · dag ${((e.day-1)%365)+1} · Trykk for å åpne →</small></button>`).join('')}<hr class="right-divider"><h3>🎯 Neste steg</h3><button type="button" class="event event-link" onclick="openNextStep()">${!totalFish(f)&&!f.pending.some(p=>p.kind==='eggs')?'Bestill din første rognleveranse under Produksjon.':totalFish(f)&&feedStock(f)<2?'Fôrlageret er lavt. Bestill fôr.':f.batches.some(b=>b.weight>=80)?'Fisk nærmer seg leveringsklar størrelse. Se etter kontrakter.':'Følg fisken og invester i videre drift.'}<small>Åpne riktig meny →</small></button></aside></div></div>${toastText?`<div class="toast" role="status">${toastText}</div>`:''}${modal||''}${guideWelcome()}`;restoreNavScroll();if(view==='overview')siteMapInit57();if(alertSheetVisible)showAlertSheet()}
 function setSpeed(v){
