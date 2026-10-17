@@ -145,6 +145,16 @@ body:has(.play58),body:has(.play58) #app,.play58{overscroll-behavior:none!import
 .site67-quay{cursor:pointer;filter:drop-shadow(2px 4px 4px #08232c70)}
 .site65-worker.site67-working{filter:drop-shadow(0 0 3px #ffe6a4)}
 .site65-vehicle{filter:drop-shadow(0 3px 2px #071e2a8c)}
+
+/* v69: subtle, continuous industrial activity. No sprite/scene reset on daily renders. */
+.site69-working-arm{transform-box:fill-box;transform-origin:15px 0;animation:site69inspect 1.15s ease-in-out infinite alternate}
+.site69-travelling .site69-working-arm{animation:none}
+.site65-worker.site67-working{filter:drop-shadow(0 0 2px #adf0e6)}
+.site69-fixtures{opacity:.9}
+.site69-architecture{opacity:.96}
+.site67-quay:hover{filter:brightness(1.12)}
+@keyframes site69inspect{0%{transform:rotate(-8deg)}100%{transform:rotate(32deg)}}
+@media(prefers-reduced-motion:reduce){.site69-working-arm{animation:none}}
 </style><style>
 .event-link{display:block;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;appearance:none;border:1px solid rgba(129,183,201,.24);transition:background .15s,border-color .15s}
 .event-link:hover,.event-link:focus-visible{background:rgba(56,189,248,.15);border-color:#52c3ed;outline:2px solid transparent}
@@ -1647,23 +1657,85 @@ function siteMapResponsive64(map,kind){
  const top=portrait?145:medium?140:115,bottom=portrait?90:medium?100:80;
  const rowH=(H-top-bottom)/rows;
  const colW=(W-left-right)/columns;
+
+ // v70: Each site has illustrated, distinct architecture rather than flat labeled boxes.
+ function drawFacility70(clone,key,bb){
+  const x=bb.x,y=bb.y,w=bb.width,h=bb.height;
+  const g=N('g',{'class':'site70-building'});
+  const P=(tag,a)=>{const el=N(tag,a);g.appendChild(el);return el};
+  const F=(d,c,stroke='#d9e9df',sw=1)=>P('path',{d,fill:c,stroke,'stroke-width':sw,'stroke-linejoin':'round'});
+  const R=(a,b,c,d,color,stroke='#d6e1db',r=3)=>P('rect',{x:a,y:b,width:c,height:d,rx:r,fill:color,stroke,'stroke-width':1.6});
+  const T=(a,b,label,size=12,color='#effff8')=>{const e=P('text',{x:a,y:b,'font-size':size,'font-weight':850,fill:color,style:'paint-order:stroke;stroke:#17363e;stroke-width:2;stroke-linejoin:round'});e.textContent=label;return e};
+  const lab={hatch:'KLEKKERI',dept0:'STARTFÔRING',dept1:'PÅVEKST',dept2:'SMOLT',silo:'FÔRLAGER',water:'VANN & O₂',admin:'ADMIN',ras:'RAS-ANLEGG',lab:'FISKEHELSE',workshop:'VERKSTED',power:'RESERVEKRAFT'};
+  const isHall=['hatch','dept0','dept1','dept2'].includes(key);
+  const roofColor=key==='admin'?'#9f8a73':key==='lab'?'#718b93':key==='silo'?'#9da4a1':key==='power'?'#788588':key==='workshop'?'#748d92':'#537b89';
+  const side=key==='admin'?'#7a6b58':'#45616b';
+  const d=Math.max(6,Math.min(w,h)*.10), top=y+4, left=x+4,right=x+w-4,bottom=y+h-4;
+  // dark ground shadow, dimensional facade and paneled roof
+  R(left+5,top+12,w-8,h-13,'#244b4b','#244b4b',4);
+  F(`M${left} ${top+d}L${right-d*.45} ${top+d}L${right} ${top+3}L${right} ${bottom-d*.5}L${right-d*.45} ${bottom+5}L${left} ${bottom+5}Z`,side,'#b9d1cd',2);
+  F(`M${left} ${top+d}L${left+d*.55} ${top}H${right}L${right-d*.45} ${top+d}L${left} ${top+d}Z`,'#90b4b6','#c6e4dc',1.3);
+  R(left,top+d,right-left-d*.45,bottom-top-d*.65,roofColor,'#d1e4e0',4);
+  // corrugated roofing on a subtle angle
+  for(let i=1;i<9;i++){const sx=left+i*(right-left-d*.4)/9;P('path',{d:`M${sx} ${top+d+3}v${bottom-top-d*1.1}`,stroke:'#a7c3c4','stroke-width':1.5,opacity:.48});}
+  // overhanging eaves and edge light
+  P('path',{d:`M${left+2} ${top+d+3}H${right-d*.6}M${left+4} ${bottom-5}H${right-d*.5}`,stroke:'#d9ecdc','stroke-width':2,opacity:.7});
+  const skylight=(a,b,ww,hh)=>{R(a,b,ww,hh,'#2a667d','#def8f3',2);P('path',{d:`M${a+2} ${b+hh-2}L${a+ww*.5} ${b+2}`,stroke:'#9ce4e5','stroke-width':2,opacity:.8});};
+  if(isHall){
+   skylight(left+w*.15,top+d+h*.12,w*.22,Math.max(8,h*.12));skylight(left+w*.52,top+d+h*.12,w*.22,Math.max(8,h*.12));
+   const ventY=top+d+h*.46;
+   R(left+w*.19,ventY,w*.50,Math.max(8,h*.10),'#314d5b','#b5d5d8',2);
+   for(let j=1;j<7;j++)P('path',{d:`M${left+w*(.19+j*.5/7)} ${ventY+2}v${Math.max(4,h*.10-4)}`,stroke:'#80a1a9','stroke-width':2});
+   // side wall: loading door + separated windows
+   R(left+w*.68,bottom-h*.10,w*.15,Math.max(8,h*.12),'#234352','#b9e6de',2);
+   for(let j=0;j<3;j++)P('path',{d:`M${left+w*.68+2} ${bottom-h*.10+3+j*h*.024}h${w*.15-4}`,stroke:'#64929a','stroke-width':1.2});
+  }else if(key==='silo'){
+   for(let i=0;i<3;i++){const cx=left+w*(.25+i*.23),cy=top+d+h*.39,rad=Math.min(w*.085,h*.16);P('circle',{cx,cy,r:rad+3,fill:'#4e747b',stroke:'#e1eddf','stroke-width':2});P('circle',{cx,cy,r:rad-2,fill:'#bed4d5',stroke:'#748f97','stroke-width':2});P('circle',{cx,cy,r:rad*.30,fill:'#758f91'});}
+   R(left+w*.18,bottom-h*.20,w*.60,h*.10,'#b18e5b','#ead6a6',1);
+  }else if(key==='water'||key==='ras'){
+   for(let j=0;j<3;j++){const cx=left+w*(.22+j*.27),cy=top+d+h*.36,rad=Math.min(w*.12,h*.18);P('circle',{cx,cy,r:rad,fill:'#185b73',stroke:'#c2e9e9','stroke-width':Math.max(2,w*.014)});P('path',{d:`M${cx-rad*.6} ${cy}q${rad*.6} -${rad*.65} ${rad*1.2} 0`,fill:'none',stroke:'#78bdca','stroke-width':2});}
+   P('path',{d:`M${left+w*.14} ${bottom-h*.2}h${w*.70}`,stroke:'#b5dfdf','stroke-width':5,fill:'none'});
+  }else if(key==='lab'||key==='admin'){
+   for(let j=0;j<3;j++)skylight(left+w*(.16+j*.24),top+d+h*.23,w*.16,h*.17);
+   R(left+w*.22,bottom-h*.20,w*.55,h*.09,'#d2d5c6','#eff5eb');
+  }else if(key==='power'){
+   R(left+w*.19,top+d+h*.23,w*.57,h*.21,'#263e47','#bed2cc');T(left+w*.39,top+d+h*.4,'⚡',Math.max(14,h*.20));
+  }else{
+   R(left+w*.15,top+d+h*.19,w*.67,h*.28,'#294f5a','#bdcbd0');
+   for(let j=1;j<6;j++)P('path',{d:`M${left+w*(.15+j*.67/6)} ${top+d+h*.2}v${h*.25}`,stroke:'#86a6a9','stroke-width':2});
+  }
+  // safe, readable roof legend instead of icon-only buildings
+  const textSize=Math.max(10,Math.min(16,w/(lab[key].length*.63+2)));
+  const signH=Math.max(20,Math.min(28,h*.20));
+  R(left+5,bottom-signH-2,w-21,signH,'#123d4adf','#85b7b6',4);
+  T(left+11,bottom-signH*.37,lab[key],textSize);
+  clone.replaceChildren(g);
+  clone.setAttribute('role','button');clone.setAttribute('tabindex','0');
+  clone.setAttribute('aria-label','Åpne '+lab[key]);
+ }
  const order=['hatch','dept0','dept1','dept2','silo','water','admin','ras','lab','workshop','power'];
- map.replaceChildren();map.setAttribute('viewBox',`0 0 ${W} ${H}`);map.setAttribute('preserveAspectRatio','xMidYMid meet');map.setAttribute('data-adaptive-layout',kind);
+ map.replaceChildren();
+ const site68Defs=N('defs');site68Defs.innerHTML=`<filter id="site68-buildingShadow" x="-20%" y="-25%" width="145%" height="160%"><feDropShadow dx="2" dy="5" stdDeviation="4" flood-color="#12342c" flood-opacity=".58"/></filter><linearGradient id="site68-roof" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#94aeb0"/><stop offset="1" stop-color="#4a6974"/></linearGradient><linearGradient id="site68-ocean" x1="0" y1="0" x2="1" y2=".75"><stop stop-color="#23778a"/><stop offset="1" stop-color="#0e4862"/></linearGradient><pattern id="site68-grass" width="62" height="58" patternUnits="userSpaceOnUse"><path d="M5 9l2 -3m0 3l3 -4M43 49l-3 -5m3 5l3 -5" stroke="#acd18b" stroke-opacity=".17" stroke-width="2"/></pattern>`;map.appendChild(site68Defs);map.setAttribute('viewBox',`0 0 ${W} ${H}`);map.setAttribute('preserveAspectRatio','xMidYMid meet');map.setAttribute('data-adaptive-layout',kind);
  const bg=N('g');map.appendChild(bg);
- bg.appendChild(N('rect',{width:W,height:H,fill:'#537b62'}));
+ bg.appendChild(N('rect',{width:W,height:H,fill:'#517d65'}));
+ bg.appendChild(N('rect',{width:W,height:H,fill:'url(#site68-grass)'}));
  // The coast follows the site's edge; quay connects to the road system.
  const coast=portrait?W-85:W-95;
- bg.appendChild(N('rect',{x:coast,y:0,width:W-coast,height:H,fill:'#176078'}));
+ bg.appendChild(N('rect',{x:coast,y:0,width:W-coast,height:H,fill:'url(#site68-ocean)'}));
  for(let y=11;y<H;y+=27){bg.appendChild(N('path',{d:`M${coast+5} ${y}q22 -8 44 0t44 0`,fill:'none',stroke:'#75bad0','stroke-width':2,opacity:.45}));}
  bg.appendChild(N('rect',{x:coast-11,y:0,width:11,height:H,fill:'#bdc4a9'}));
  const dryW=coast-12;
  // Road network: one central avenue and connecting transverse service roads.
  const roadLayer=N('g');bg.appendChild(roadLayer);
  const addRoad=(x,y,w,h,vertical=false)=>{
-  roadLayer.appendChild(N('rect',{x,y,width:w,height:h,fill:'#405960',stroke:'#a1b0a1','stroke-width':3}));
+  roadLayer.appendChild(N('rect',{x:x-4,y:y-4,width:w+8,height:h+8,fill:'#9eae9c',stroke:'#d5d6b9','stroke-width':1}));
+  roadLayer.appendChild(N('rect',{x,y,width:w,height:h,fill:'#344e58',stroke:'#526f73','stroke-width':2}));
+  if(vertical){roadLayer.appendChild(N('path',{d:`M${x+4} ${y}V${y+h}M${x+w-4} ${y}V${y+h}`,stroke:'#d6e0d4','stroke-width':1.5,opacity:.7}));}
+  else{roadLayer.appendChild(N('path',{d:`M${x} ${y+4}H${x+w}M${x} ${y+h-4}H${x+w}`,stroke:'#d6e0d4','stroke-width':1.5,opacity:.7}));}
   const center=vertical?x+w/2:y+h/2;
   roadLayer.appendChild(N('path',{d:vertical?`M${center} ${y}V${y+h}`:`M${x} ${center}H${x+w}`,stroke:'#e9ce8b','stroke-width':2.5,'stroke-dasharray':'16 14',fill:'none'}));
  };
+ // Road edge line, shoulder and gravel drainage channel.
  const lanes=[];
  for(let i=1;i<rows;i++){
    const y=top+i*rowH-22;
@@ -1688,7 +1760,69 @@ function siteMapResponsive64(map,kind){
   site.appendChild(N('path',{d:roadEnd===spineX?`M${doorX} ${doorY}H${spineX}`:`M${doorX} ${doorY}V${lane}`,stroke:'#a9b7af','stroke-width':12,fill:'none'}));
   site.appendChild(N('path',{d:roadEnd===spineX?`M${doorX} ${doorY}H${spineX}`:`M${doorX} ${doorY}V${lane}`,stroke:'#687b79','stroke-width':7,fill:'none'}));
   const wrapper=N('g',{transform:`translate(${posX} ${posY}) scale(${scale}) translate(${-bb.x} ${-bb.y})`});
-  const clone=entry.el.cloneNode(true);if(key==='admin')clone.removeAttribute('transform');wrapper.appendChild(clone);site.appendChild(wrapper);
+  const clone=entry.el.cloneNode(true);if(key==='admin')clone.removeAttribute('transform');
+  drawFacility70(clone,key,bb);
+  clone.setAttribute('filter','url(#site68-buildingShadow)');
+  wrapper.appendChild(clone);
+  // v69: detailed industrial roofs, doors and mechanical plant, rendered in each
+  // building's original coordinate system (no stretching across devices).
+  const roof=N('g',{'class':'site69-architecture','pointer-events':'none'});
+  const x0=bb.x,y0=bb.y,bw=bb.width,bh=bb.height;
+  const inset=Math.max(5,Math.min(bw,bh)*.075);
+  const roofY=y0+inset, roofX=x0+inset;
+  const roofW=bw-2*inset,roofH=bh-2*inset;
+  const dark=['hatch','dept0','dept1','dept2'].includes(key)?'#496b78':key==='silo'?'#64727a':key==='admin'?'#8b8578':'#526d76';
+  const rb=N('rect',{x:roofX,y:roofY,width:roofW,height:roofH,rx:Math.min(9,bh*.06),fill:dark,opacity:.21,stroke:'#ebf8ee','stroke-width':1.7});roof.appendChild(rb);
+  // Steel roof standing seams and a recessed ventilation strip.
+  const seamStep=Math.max(12,Math.min(26,bw/8));
+  for(let sx=roofX+seamStep;sx<roofX+roofW-4;sx+=seamStep){
+    roof.appendChild(N('path',{d:`M${sx} ${roofY+4}V${roofY+roofH-5}`,stroke:'#d1e2e0','stroke-width':1.4,opacity:.35}));
+  }
+  // Glazed skylights: visually distinguish active halls from the other buildings.
+  if(['hatch','dept0','dept1','dept2'].includes(key)){
+    const sy=roofY+Math.max(9,roofH*.12), sh=Math.min(13,roofH*.12);
+    roof.appendChild(N('rect',{x:roofX+roofW*.18,y:sy,width:roofW*.64,height:sh,rx:3,fill:'#a6e1e1',stroke:'#ecfcf3','stroke-width':2,opacity:.83}));
+    for(let xx=roofX+roofW*.34;xx<roofX+roofW*.79;xx+=roofW*.17)roof.appendChild(N('path',{d:`M${xx} ${sy}V${sy+sh}`,stroke:'#4c8794','stroke-width':2}));
+  }
+  if(key==='silo'){
+    for(let j=0;j<Math.min(4,Math.floor(roofW/39));j++){
+      const cx=roofX+24+j*Math.min(39,roofW/5),cy=roofY+Math.min(35,roofH*.37);
+      roof.appendChild(N('ellipse',{cx,cy,rx:11,ry:7,fill:'#c6d9d6',stroke:'#eff5e4','stroke-width':2}));
+      roof.appendChild(N('circle',{cx,cy,r:3,fill:'#687b7d'}));
+    }
+  }else if(key==='water'||key==='ras'){
+    const n=Math.min(3,Math.max(1,Math.floor(roofW/40)));
+    for(let j=0;j<n;j++){
+      const cx=roofX+roofW*(j+1)/(n+1),cy=roofY+roofH*.28;
+      roof.appendChild(N('circle',{cx,cy,r:Math.min(10,roofH*.11),fill:'#2b5a69',stroke:'#a7d5d7','stroke-width':3}));
+      roof.appendChild(N('path',{d:`M${cx-4} ${cy-4}l8 8m0 -8l-8 8`,stroke:'#7cb9bf','stroke-width':2}));
+    }
+  }else if(key==='power'||key==='workshop'){
+    roof.appendChild(N('rect',{x:roofX+roofW*.12,y:roofY+roofH*.22,width:roofW*.76,height:Math.min(15,roofH*.14),rx:2,fill:'#283d47',stroke:'#9dabb3','stroke-width':2}));
+    for(let j=0;j<6;j++){const xx=roofX+roofW*(.18+j*.1);roof.appendChild(N('path',{d:`M${xx} ${roofY+roofH*.22}V${roofY+roofH*.22+Math.min(15,roofH*.14)}`,stroke:'#6c9099','stroke-width':2}));}
+  }else if(key==='admin'||key==='lab'){
+    for(let j=0;j<3;j++)roof.appendChild(N('rect',{x:roofX+roofW*(.19+j*.22),y:roofY+roofH*.21,width:Math.min(18,roofW*.16),height:Math.min(15,roofH*.14),rx:2,fill:'#95c6d6',stroke:'#e1f2ed','stroke-width':2}));
+  }
+  // Signage is preserved above the roof details by clipping the decals to the top portion.
+  const clipId='site69-roofclip-'+key;
+  const cl=N('clipPath',{id:clipId});cl.appendChild(N('rect',{x:roofX,y:roofY,width:roofW,height:Math.max(13,roofH*.46)}));site68Defs.appendChild(cl);
+  roof.setAttribute('clip-path',`url(#${clipId})`);
+  site.appendChild(wrapper);
+  // Shaded foundations, yellow access marking, piping and door approaches.
+  const fore=N('g',{'pointer-events':'none'});
+  const ax=posX+bb.width*scale*.85,ay=posY+bb.height*scale*.97;
+  fore.appendChild(N('path',{d:`M${ax-9} ${ay+4}h18m-14 5h10`,stroke:'#ebd37e','stroke-width':3,opacity:.85}));
+  if(['hatch','dept0','dept1','dept2','water','ras'].includes(key)){
+   fore.appendChild(N('path',{d:`M${posX+Math.max(5,bb.width*.08)*scale} ${posY+bb.height*scale*.76}h${bb.width*scale*.17}v${bb.height*scale*.15}`,stroke:'#a0d7da','stroke-width':Math.max(2,4*scale),fill:'none'}));
+   fore.appendChild(N('circle',{cx:posX+bb.width*scale*.25,cy:posY+bb.height*scale*.75,r:3,fill:'#7fe6e9'}));
+  }
+  site.appendChild(fore);
+  // Building perimeter illumination and practical front-side canopy/door marker.
+  const frontY=posY+bb.height*scale+2;
+  const door= N('g',{'pointer-events':'none'});
+  door.appendChild(N('rect',{x:doorX-10,y:frontY-4,width:20,height:6,rx:2,fill:'#dbeee7',stroke:'#3c6673','stroke-width':1}));
+  door.appendChild(N('path',{d:`M${doorX-13} ${frontY+3}H${doorX+13}`,stroke:'#d2b66c','stroke-width':2}));
+  site.appendChild(door);
  });
  // Quay MUST be on the waterline. Access road finishes onshore; pier projects seaward.
  const quayY=portrait?H*.78:medium?H*.70:H*.68;
@@ -1702,7 +1836,25 @@ function siteMapResponsive64(map,kind){
  for(let yy=quayY+10;yy<quayY+quayH-4;yy+=19)quay.appendChild(N('path',{d:`M${pierX+4} ${yy}H${pierX+pierW-4}`,stroke:'#d3b990','stroke-width':3}));
  for(const xx of [pierX+7,pierX+pierW-9])for(const yy of [quayY+12,quayY+quayH-11])quay.appendChild(N('circle',{cx:xx,cy:yy,r:4,fill:'#293f46',stroke:'#d3d5bc','stroke-width':1.5}));
  const sign=N('text',{x:pierX+5,y:quayY-13,fill:'#f6fff3','font-size':18,'font-weight':900});sign.textContent='⚓ KAI';quay.appendChild(sign);
- site.appendChild(quay);
+ for(let by=quayY+24;by<quayY+quayH;by+=42){
+   quay.appendChild(N('rect',{x:coast+5,y:by,width:7,height:16,rx:2,fill:'#334651'}));
+   quay.appendChild(N('rect',{x:W-14,y:by,width:8,height:17,rx:2,fill:'#334651'}));
+ }
+ const dockGate=N('g',{'pointer-events':'none'});
+ dockGate.appendChild(N('path',{d:`M${coast-50} ${coastRoadY-12}H${coast-12}`,stroke:'#dfd5a0','stroke-width':3,'stroke-dasharray':'7 5'}));
+ dockGate.appendChild(N('path',{d:`M${coast-17} ${quayY+10}V${quayY+quayH-10}`,stroke:'#e9d9ab','stroke-width':3}));
+ site.appendChild(dockGate);site.appendChild(quay);
+ // Working service berth: boat appears on the SEA side only during shipment.
+ if(facility().deliveries?.some(d=>d.due>=s.date)){
+   const bx=Math.min(W-22,coast+45),by=quayY+quayH/2;
+   const vessel=N('g',{'class':'site70-vessel','pointer-events':'none',transform:`translate(${bx} ${by})`});
+   vessel.appendChild(N('path',{d:'M0 -51 Q22 -45 23 -22 V28 Q13 49 0 54 Q-13 49 -23 28 V-22 Q-22 -45 0 -51Z',fill:'#dce9e7',stroke:'#15455c','stroke-width':3}));
+   vessel.appendChild(N('rect',{x:-16,y:-26,width:32,height:46,rx:3,fill:'#9b3b3b',stroke:'#f2d4cf','stroke-width':2}));
+   vessel.appendChild(N('rect',{x:-12,y:-18,width:24,height:18,rx:2,fill:'#d1edf0',stroke:'#315d6f','stroke-width':2}));
+   vessel.appendChild(N('path',{d:'M-18 -43Q0 -61 18 -43M-18 39Q0 63 18 39',fill:'none',stroke:'#a7dfe9','stroke-width':2,opacity:.7}));
+   site.appendChild(vessel);
+ }
+
  // Floating fenders and water ripples surrounding the actual berth.
  const wake=N('g',{'pointer-events':'none'});site.appendChild(wake);
  for(let i=0;i<4;i++)wake.appendChild(N('ellipse',{cx:Math.min(W-12,coast+38+i*12),cy:quayY+24+i*25,rx:9,ry:4,fill:'none',stroke:'#83c9d2','stroke-width':1.6,opacity:.7}));
@@ -1731,6 +1883,68 @@ function siteMapResponsive64(map,kind){
    details.appendChild(N('rect',{x,y,width:16,height:20,rx:3,fill:'#587b86',stroke:'#d3e6de','stroke-width':2}));
    details.appendChild(N('circle',{cx:x+8,cy:y+5,r:2.6,fill:'#6ee3a4'}));
  }
+ // v69 site detail layer: active coastal industry without covering clickable buildings.
+ const polish=N('g',{'pointer-events':'none'});map.appendChild(polish);
+ const lamp=(x,y)=>{
+   polish.appendChild(N('ellipse',{cx:x+2,cy:y+8,rx:13,ry:5,fill:'#14382b',opacity:.45}));
+   polish.appendChild(N('path',{d:`M${x} ${y}v-23q0 -5 6 -5h7`,stroke:'#c5d5cb','stroke-width':3,fill:'none'}));
+   polish.appendChild(N('ellipse',{cx:x+13,cy:y-28,rx:7,ry:3,fill:'#fff2ad',opacity:.96}));
+ };
+ for(let i=0;i<Math.min(13,lanes.length*3+3);i++){
+   const x=(i%3===0?spineX-43:i%3===1?spineX+40:coast-36);
+   const y=78+i*(H-155)/Math.min(13,lanes.length*3+3);
+   if(lanes.some(l=>Math.abs(l-y)<36))continue;
+   lamp(x,y);
+ }
+ // Mark crossings through the shared central foot/vehicle corridor.
+ for(const yy of lanes){
+  for(let j=-2;j<=2;j++)polish.appendChild(N('rect',{x:spineX-25+j*10,y:yy-26,width:6,height:10,rx:1,fill:'#c9d6d1',opacity:.87}));
+  for(let j=-2;j<=2;j++)polish.appendChild(N('rect',{x:spineX-25+j*10,y:yy+16,width:6,height:10,rx:1,fill:'#c9d6d1',opacity:.87}));
+  for(let x=26;x<dryW-24;x+=110){
+   if(Math.abs(x-spineX)<45)continue;
+   polish.appendChild(N('rect',{x,y:yy-29,width:17,height:5,rx:2,fill:'#1e4950',stroke:'#8baca7','stroke-width':1.5}));
+   polish.appendChild(N('path',{d:`M${x+5} ${yy-26}h7`,stroke:'#a2bcc1','stroke-width':1}));
+  }
+ }
+ // Distinct service area next to water treatment: pipe rack and warning stripes.
+ const equipX=coast-46,equipY=Math.max(94,top-67);
+ polish.appendChild(N('rect',{x:equipX-8,y:equipY,width:31,height:58,rx:5,fill:'#4e727b',stroke:'#b7d2cb','stroke-width':2}));
+ for(let i=0;i<3;i++)polish.appendChild(N('path',{d:`M${equipX-4} ${equipY+12+i*13}h23`,stroke:i===1?'#e5c46f':'#84c5c9','stroke-width':4}));
+ polish.appendChild(N('path',{d:`M${equipX+8} ${equipY+58}V${equipY+73}h-30`,stroke:'#99cdd0','stroke-width':5,fill:'none'}));
+ // Wharf bollards, safety markings, shore water movement.
+ for(let j=0;j<6;j++){
+  const yy=quayY-21+j*32;
+  if(yy>quayY+quayH+8)break;
+  polish.appendChild(N('path',{d:`M${coast+14} ${yy}q16 -9 32 0t33 0`,stroke:'#84cddd',fill:'none','stroke-width':2,opacity:.63}));
+ }
+ // Pallets and storage-side handling equipment, clear of building buttons.
+ for(let j=0;j<3;j++){
+  const xx=23+j*18, yy=H-55;
+  polish.appendChild(N('rect',{x:xx,y:yy,width:15,height:10,rx:1,fill:'#b69a68',stroke:'#e0cb94','stroke-width':1}));
+  polish.appendChild(N('path',{d:`M${xx+2} ${yy+5}h11`,stroke:'#745e41','stroke-width':1}));
+ }
+ // v69: Industrial surroundings: pipe corridor, security fences, loading bays,
+ // street lamps, storm drains, workshop supplies and soft coastal site lighting.
+ const fixtures=N('g',{'class':'site69-fixtures','pointer-events':'none'});map.appendChild(fixtures);
+ const freex=portrait?22:36;
+ for(let j=0;j<Math.min(6,lanes.length+2);j++){
+  const yy=Math.min(H-48,top+35+j*Math.max(95,(H-top-100)/Math.max(3,lanes.length+1)));
+  if(lanes.some(l=>Math.abs(l-yy)<28))continue;
+  fixtures.appendChild(N('rect',{x:freex,y:yy,width:45,height:26,rx:3,fill:'#65848b',stroke:'#b9c9c8','stroke-width':2}));
+  fixtures.appendChild(N('rect',{x:freex+6,y:yy+6,width:12,height:12,rx:2,fill:'#8cc7d0'}));
+  fixtures.appendChild(N('rect',{x:freex+24,y:yy+6,width:12,height:12,rx:2,fill:'#8cc7d0'}));
+  fixtures.appendChild(N('path',{d:`M${freex+4} ${yy+30}h40`,stroke:'#9eb8b4','stroke-width':2,'stroke-dasharray':'3 3'}));
+ }
+ // A long working pipe rack leading towards the seawater-processing area.
+ const px=coast-29,py=Math.max(135,top+42),pipeLength=Math.min(180,H*.13);
+ fixtures.appendChild(N('path',{d:`M${px-23} ${py}V${py+pipeLength}m9 -${pipeLength}v${pipeLength}m9 -${pipeLength}v${pipeLength}`,fill:'none',stroke:'#8ed0da','stroke-width':3,opacity:.7}));
+ for(let j=0;j<5;j++){const yy=py+j*pipeLength/4;fixtures.appendChild(N('path',{d:`M${px-30} ${yy}h31`,stroke:'#badbd7','stroke-width':3}));}
+ // Quay-side safety bollards and ladders, kept outside the landward access road.
+ for(let j=0;j<3;j++){
+  const yy=quayY+19+j*Math.max(25,(quayH-30)/3);
+  fixtures.appendChild(N('rect',{x:coast+2,y:yy,width:10,height:7,rx:2,fill:'#263b47',stroke:'#d5e8df','stroke-width':1.5}));
+ }
+ fixtures.appendChild(N('path',{d:`M${coast+18} ${quayY+quayH-23}v22m10 -22v22m-10 -15h10m-10 8h10`,stroke:'#d5e6e3','stroke-width':2.2,fill:'none'}));
  // Movement is attached to actual service roads, with routes around intersections.
  const traffic=N('g',{'class':'site65-traffic','aria-hidden':'true'});map.appendChild(traffic);
  function moving(g,route,speed,delay,stops){g.dataset.path67=JSON.stringify(route);g.dataset.speed67=String(speed);g.dataset.offset67=String(delay);g.dataset.wait67=String(stops||0);traffic.appendChild(g)}
@@ -1739,7 +1953,11 @@ function siteMapResponsive64(map,kind){
   g.appendChild(N('circle',{cy:-12,r:6,fill:'#eab98b'}));
   g.appendChild(N('path',{d:'M-6 -5H6L7 6H-7Z',fill:tint,stroke:'#f6dbab','stroke-width':1.5}));
   g.appendChild(N('path',{d:'M-4 6L-5 13M4 6L5 13',stroke:'#153445','stroke-width':3.5}));
-  if(tool)g.appendChild(N('path',{d:'M6 -3L19 9M15 8Q20 15 25 8Z',stroke:'#b7e9f4','stroke-width':2,fill:'none'}));
+  const arm=N('g',{'class':'site69-working-arm'});
+  arm.appendChild(N('path',{d:'M5 -3L14 5',stroke:'#e3b38e','stroke-width':3,'stroke-linecap':'round'}));
+  if(tool){arm.appendChild(N('path',{d:'M14 5L23 13M19 12Q24 18 29 12Z',stroke:'#b7e9f4','stroke-width':2,fill:'none'}));}
+  else arm.appendChild(N('rect',{x:12,y:1,width:9,height:11,rx:2,fill:'#66c6c8',stroke:'#d6f8f1','stroke-width':1.5}));
+  g.appendChild(arm);
   return g;
  }
  function truck(tint,load){const g=N('g',{'class':'site65-vehicle'});
@@ -1752,15 +1970,15 @@ function siteMapResponsive64(map,kind){
  const roadA=lanes[Math.max(0,Math.floor(lanes.length*.3))]||H*.4;
  const roadB=lanes[Math.max(0,Math.floor(lanes.length*.75))]||H*.7;
  const leftEnd=27,rightEnd=dryW-26;
- moving(truck('#e6a33c',true),[[leftEnd,roadA],[spineX,roadA],[rightEnd,roadA],[rightEnd,roadB],[spineX,roadB],[leftEnd,roadB]],38,0,1.8);
- moving(truck('#4190a2',false),[[rightEnd,roadB],[spineX,roadB],[leftEnd,roadB],[leftEnd,roadA],[spineX,roadA],[rightEnd,roadA]],32,9,2.3);
+ moving(truck('#e6a33c',true),[[leftEnd,roadA],[spineX,roadA],[spineX,roadB],[rightEnd,roadB],[spineX,roadB],[spineX,roadA]],31,0,1.7);
+ moving(truck('#4190a2',false),[[rightEnd,roadB],[spineX,roadB],[spineX,roadA],[leftEnd,roadA],[spineX,roadA],[spineX,roadB]],27,9,2.3);
  moving(worker('#ef8b35',true),[[spineX+10,40],[spineX+10,roadA],[spineX+10,roadB],[spineX+10,H-50],[spineX+10,roadB]],19,1,4);
  moving(worker('#ef8b35',false),[[spineX-10,H-56],[spineX-10,roadB],[spineX-10,roadA],[spineX-10,40],[spineX-10,roadA]],17,12,3.4);
  if(lanes.length>1)moving(worker('#d5e5ec',true),[[leftEnd,roadB+12],[spineX,roadB+12],[rightEnd,roadB+12],[spineX,roadB+12]],15,21,4.5);
  siteMotion67();
 }
 
-// v0.67: persistent clock + distance-based travel. No SMIL restart on a render.
+// v0.69: persistent clock + distance-based travel. No SMIL restart on a render.
 const site67Start=performance.now();
 function siteMotion67(){
  const svg=document.querySelector('.play58 .map57-stage svg');if(!svg)return;
@@ -1786,6 +2004,8 @@ function siteMotion67(){
   const flip=actor.classList.contains('site65-vehicle')&&direction<-.2?' scale(-1 1)':'';
   actor.setAttribute('transform',`translate(${x.toFixed(2)} ${y.toFixed(2)})${flip}`);
   actor.classList.toggle('site67-working',!section.moving);
+  // Stop animation only when actually travelling; activate visible task tools at stops.
+  actor.classList.toggle('site69-travelling',!!section.moving);
  });
 }
 setInterval(siteMotion67,50);
