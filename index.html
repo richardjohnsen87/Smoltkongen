@@ -140,6 +140,11 @@ body:has(.play58),body:has(.play58) #app,.play58{overscroll-behavior:none!import
 .play58 .map57-stage svg{object-fit:contain!important;overflow:visible!important}
 .play58 .map57-viewport{background:linear-gradient(90deg,#517961 0%,#517961 75%,#185a72 75%,#185a72 100%)!important}
 .play58 .map57-stage{background:linear-gradient(90deg,#527961 0%,#527961 76%,#19566d 76%,#19566d 100%)!important}
+
+/* v67: details remain proportional and characters stand still only during tasks. */
+.site67-quay{cursor:pointer;filter:drop-shadow(2px 4px 4px #08232c70)}
+.site65-worker.site67-working{filter:drop-shadow(0 0 3px #ffe6a4)}
+.site65-vehicle{filter:drop-shadow(0 3px 2px #071e2a8c)}
 </style><style>
 .event-link{display:block;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;appearance:none;border:1px solid rgba(129,183,201,.24);transition:background .15s,border-color .15s}
 .event-link:hover,.event-link:focus-visible{background:rgba(56,189,248,.15);border-color:#52c3ed;outline:2px solid transparent}
@@ -1637,12 +1642,12 @@ function siteMapResponsive64(map,kind){
  const portrait=kind==='portrait';
  const medium=kind==='medium';
  const W=portrait?850:medium?1120:1520,H=portrait?1700:medium?1130:860;
- const columns=portrait?2:medium?3:4,rows=Math.ceil(12/columns);
+ const columns=portrait?2:medium?3:4,rows=Math.ceil(11/columns);
  const left=portrait?25:35,right=portrait?25:medium?75:120;
  const top=portrait?145:medium?140:115,bottom=portrait?90:medium?100:80;
  const rowH=(H-top-bottom)/rows;
  const colW=(W-left-right)/columns;
- const order=['hatch','dept0','dept1','dept2','silo','water','admin','ras','lab','workshop','power','dock'];
+ const order=['hatch','dept0','dept1','dept2','silo','water','admin','ras','lab','workshop','power'];
  map.replaceChildren();map.setAttribute('viewBox',`0 0 ${W} ${H}`);map.setAttribute('preserveAspectRatio','xMidYMid meet');map.setAttribute('data-adaptive-layout',kind);
  const bg=N('g');map.appendChild(bg);
  bg.appendChild(N('rect',{width:W,height:H,fill:'#537b62'}));
@@ -1685,6 +1690,23 @@ function siteMapResponsive64(map,kind){
   const wrapper=N('g',{transform:`translate(${posX} ${posY}) scale(${scale}) translate(${-bb.x} ${-bb.y})`});
   const clone=entry.el.cloneNode(true);if(key==='admin')clone.removeAttribute('transform');wrapper.appendChild(clone);site.appendChild(wrapper);
  });
+ // Quay MUST be on the waterline. Access road finishes onshore; pier projects seaward.
+ const quayY=portrait?H*.78:medium?H*.70:H*.68;
+ const quayH=portrait?132:medium?128:120;
+ const coastRoadY=quayY+quayH*.52;
+ addRoad(spineX,coastRoadY-16,Math.max(0,coast-spineX),32);
+ const quay=N('g',{'class':'site67-quay',role:'button',tabindex:'0','aria-label':'Kai – brønnbåt og leveranser',onclick:"tab('contracts')",onkeydown:"if(event.key==='Enter')tab('contracts')"});
+ // Land-side abutment is at coast x, wood decking extends into the water.
+ const pierX=coast-14,pierW=W-coast+4;
+ quay.appendChild(N('rect',{x:pierX,y:quayY,width:pierW,height:quayH,rx:5,fill:'#977956',stroke:'#e2ceaa','stroke-width':4}));
+ for(let yy=quayY+10;yy<quayY+quayH-4;yy+=19)quay.appendChild(N('path',{d:`M${pierX+4} ${yy}H${pierX+pierW-4}`,stroke:'#d3b990','stroke-width':3}));
+ for(const xx of [pierX+7,pierX+pierW-9])for(const yy of [quayY+12,quayY+quayH-11])quay.appendChild(N('circle',{cx:xx,cy:yy,r:4,fill:'#293f46',stroke:'#d3d5bc','stroke-width':1.5}));
+ const sign=N('text',{x:pierX+5,y:quayY-13,fill:'#f6fff3','font-size':18,'font-weight':900});sign.textContent='⚓ KAI';quay.appendChild(sign);
+ site.appendChild(quay);
+ // Floating fenders and water ripples surrounding the actual berth.
+ const wake=N('g',{'pointer-events':'none'});site.appendChild(wake);
+ for(let i=0;i<4;i++)wake.appendChild(N('ellipse',{cx:Math.min(W-12,coast+38+i*12),cy:quayY+24+i*25,rx:9,ry:4,fill:'none',stroke:'#83c9d2','stroke-width':1.6,opacity:.7}));
+
  // Vegetation, markings and functional open spaces across the unified site.
  const scenery=N('g',{'pointer-events':'none'});map.appendChild(scenery);
  for(let i=0;i<(portrait?25:34);i++){
@@ -1693,9 +1715,25 @@ function siteMapResponsive64(map,kind){
   scenery.appendChild(N('ellipse',{cx:x+2,cy:y+9,rx:14,ry:5,fill:'#244d3b88'}));
   scenery.appendChild(N('path',{d:`M${x} ${y-14}l-11 21h22Z`,fill:i%3?'#2a674b':'#336e4e',stroke:'#88ad7e','stroke-width':1.5}));
  }
+ // Operational details: graded road edges, drains, service cabinets and planted verges.
+ const details=N('g',{'pointer-events':'none'});map.appendChild(details);
+ for(const cy of lanes){
+   for(let x=30;x<dryW-25;x+=77){
+     if(Math.abs(x-spineX)<48)continue;
+     details.appendChild(N('rect',{x,y:cy-31,width:34,height:5,rx:2,fill:'#a8b1a3',opacity:.7}));
+     details.appendChild(N('rect',{x:x+13,y:cy+26,width:26,height:5,rx:2,fill:'#899c9c',opacity:.65}));
+   }
+ }
+ for(let i=0;i<9;i++){
+   const y=top+43+i*(H-top-bottom-84)/8;
+   if(lanes.some(road=>Math.abs(y-road)<30))continue;
+   const x=spineX+(i%2?39:-62);
+   details.appendChild(N('rect',{x,y,width:16,height:20,rx:3,fill:'#587b86',stroke:'#d3e6de','stroke-width':2}));
+   details.appendChild(N('circle',{cx:x+8,cy:y+5,r:2.6,fill:'#6ee3a4'}));
+ }
  // Movement is attached to actual service roads, with routes around intersections.
  const traffic=N('g',{'class':'site65-traffic','aria-hidden':'true'});map.appendChild(traffic);
- function moving(g,d,time,delay){g.appendChild(N('animateMotion',{path:d,dur:`${time}s`,begin:`${delay}s`,repeatCount:'indefinite',calcMode:'linear',rotate:'auto'}));traffic.appendChild(g)}
+ function moving(g,route,speed,delay,stops){g.dataset.path67=JSON.stringify(route);g.dataset.speed67=String(speed);g.dataset.offset67=String(delay);g.dataset.wait67=String(stops||0);traffic.appendChild(g)}
  function worker(tint,tool){const g=N('g',{'class':'site65-worker'});
   g.appendChild(N('ellipse',{cy:10,rx:9,ry:4,fill:'#102c3780'}));
   g.appendChild(N('circle',{cy:-12,r:6,fill:'#eab98b'}));
@@ -1713,13 +1751,44 @@ function siteMapResponsive64(map,kind){
  }
  const roadA=lanes[Math.max(0,Math.floor(lanes.length*.3))]||H*.4;
  const roadB=lanes[Math.max(0,Math.floor(lanes.length*.75))]||H*.7;
- moving(truck('#e6a33c',true),`M25 ${roadA}H${dryW-12}V${roadB}H25V${roadA}`,25,0);
- moving(truck('#4190a2',false),`M${dryW-12} ${roadB}H25V${roadA}H${dryW-12}V${roadB}`,34,-11);
- moving(worker('#ef8b35',true),`M${spineX+6} 20V${H-25}V20`,38,-3);
- moving(worker('#ef8b35',false),`M${spineX-8} ${H-25}V20V${H-25}`,46,-15);
- if(lanes.length>1)moving(worker('#d5e5ec',true),`M24 ${roadB+13}H${dryW-17}H24`,39,-8);
+ const leftEnd=27,rightEnd=dryW-26;
+ moving(truck('#e6a33c',true),[[leftEnd,roadA],[spineX,roadA],[rightEnd,roadA],[rightEnd,roadB],[spineX,roadB],[leftEnd,roadB]],38,0,1.8);
+ moving(truck('#4190a2',false),[[rightEnd,roadB],[spineX,roadB],[leftEnd,roadB],[leftEnd,roadA],[spineX,roadA],[rightEnd,roadA]],32,9,2.3);
+ moving(worker('#ef8b35',true),[[spineX+10,40],[spineX+10,roadA],[spineX+10,roadB],[spineX+10,H-50],[spineX+10,roadB]],19,1,4);
+ moving(worker('#ef8b35',false),[[spineX-10,H-56],[spineX-10,roadB],[spineX-10,roadA],[spineX-10,40],[spineX-10,roadA]],17,12,3.4);
+ if(lanes.length>1)moving(worker('#d5e5ec',true),[[leftEnd,roadB+12],[spineX,roadB+12],[rightEnd,roadB+12],[spineX,roadB+12]],15,21,4.5);
+ siteMotion67();
 }
 
+// v0.67: persistent clock + distance-based travel. No SMIL restart on a render.
+const site67Start=performance.now();
+function siteMotion67(){
+ const svg=document.querySelector('.play58 .map57-stage svg');if(!svg)return;
+ const now=(performance.now()-site67Start)/1000;
+ svg.querySelectorAll('[data-path67]').forEach((actor)=>{
+  let route;try{route=JSON.parse(actor.dataset.path67)}catch{return}
+  if(!route||route.length<2)return;
+  const speed=Math.max(3,Number(actor.dataset.speed67)||20),wait=Math.max(0,Number(actor.dataset.wait67)||0);
+  const seg=[];let duration=0;
+  for(let i=0;i<route.length;i++){
+   const a=route[i],b=route[(i+1)%route.length];
+   const length=Math.hypot(b[0]-a[0],b[1]-a[1]);
+   if(length>.1){const travel=length/speed;seg.push({a,b,begin:duration,end:duration+travel,moving:true});duration+=travel}
+   seg.push({a:b,b,begin:duration,end:duration+wait,moving:false});duration+=wait;
+  }
+  if(!duration)return;
+  let t=(now+Number(actor.dataset.offset67||0))%duration;
+  const section=seg.find(q=>t>=q.begin&&t<q.end)||seg[0];
+  const progress=section.moving?(t-section.begin)/(section.end-section.begin):0;
+  const x=section.a[0]+(section.b[0]-section.a[0])*progress;
+  const y=section.a[1]+(section.b[1]-section.a[1])*progress;
+  const direction=section.b[0]-section.a[0];
+  const flip=actor.classList.contains('site65-vehicle')&&direction<-.2?' scale(-1 1)':'';
+  actor.setAttribute('transform',`translate(${x.toFixed(2)} ${y.toFixed(2)})${flip}`);
+  actor.classList.toggle('site67-working',!section.moving);
+ });
+}
+setInterval(siteMotion67,50);
 function siteMapBounds57(){siteMapReset57()}
 function siteMapZoom57(){siteMapReset57()}
 function siteMapInit57(){siteMapReset57()}
